@@ -1,13 +1,23 @@
 defmodule Swampman.MixProject do
   use Mix.Project
 
+  @version "0.0.1"
+
   def project do
     [
       app: :swampman,
-      version: "0.0.0",
+      version: @version,
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      description: "A library for pooling and managing resources",
+      package: package(),
+      source_url: "https://github.com/zen-en-tonal/swampman",
+      homepage_url: "https://github.com/zen-en-tonal/swampman",
+      docs: [
+        main: "Swampman",
+        extras: ["README.md", "LICENSE"]
+      ]
     ]
   end
 
@@ -26,6 +36,18 @@ defmodule Swampman.MixProject do
       {:telemetry, "~> 1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      maintainers: ["Takeru KODAMA"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/zen-en-tonal/swampman",
+        "Docs" => "https://hexdocs.pm/swampman"
+      },
+      files: ~w(lib mix.exs README.md LICENSE)
     ]
   end
 end
