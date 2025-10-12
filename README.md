@@ -1,21 +1,29 @@
-# ElixirTemplate
+# Swampman
 
-**TODO: Add description**
+Swampman is a lightweight worker pool manager for Elixir applications.
+
+It allows you to manage a pool of worker processes, providing functionality to check out and check in workers, as well as dynamically resize the pool.
+
+## Features
+
+- Configurable pool size and overflow size.
+- Automatic worker process management.
+- Simple API for checking out and checking in workers.
+- Transaction support for executing functions with a checked-out worker.
+- Dynamic resizing of the worker pool.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `my_app` to your list of dependencies in `mix.exs`:
+Add `swampman` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:my_app, "~> 0.1.0"}
+    {:swampman, "~> 0.0.1"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/my_app](https://hexdocs.pm/my_app).
+## License
 
+See [LICENSE](LICENSE) for details.
