@@ -21,6 +21,7 @@ defmodule Swampman.Manager do
     :target_size,
     :overflow_size,
     :worker_spec,
+    :sup_pid,
     workers: %{},
     overflow_workers: MapSet.new()
   ]
@@ -125,6 +126,10 @@ defmodule Swampman.Manager do
 
   @impl true
   def init(%__MODULE__{} = init) do
+    {:ok, pid} = DynamicSupervisor.start_link(strategy: :one_for_one)
+
+    init = %{init | sup_pid: pid}
+
     {:ok, init |> maybe_expand()}
   end
 
@@ -136,7 +141,7 @@ defmodule Swampman.Manager do
 
       nil ->
         if MapSet.size(state.overflow_workers) < state.overflow_size do
-          {:ok, pid} = DynamicSupervisor.start_child(Swampman.DynamicSup, state.worker_spec)
+          {:ok, pid} = DynamicSupervisor.start_child(state.sup_pid, state.worker_spec)
           Process.monitor(pid)
           overflow_workers = MapSet.put(state.overflow_workers, pid)
           {:reply, {:ok, pid}, %{state | overflow_workers: overflow_workers}}
@@ -179,7 +184,7 @@ defmodule Swampman.Manager do
          %{state | workers: Map.put(state.workers, worker, {:idle, ref})} |> maybe_shrink()}
 
       MapSet.member?(state.overflow_workers, worker) ->
-        DynamicSupervisor.terminate_child(Swampman.DynamicSup, worker)
+        DynamicSupervisor.terminate_child(state.sup_pid, worker)
         overflow_workers = MapSet.delete(state.overflow_workers, worker)
         {:noreply, %{state | overflow_workers: overflow_workers}}
 
@@ -220,7 +225,7 @@ defmodule Swampman.Manager do
         state
 
       {true, {pid, _}} ->
-        DynamicSupervisor.terminate_child(Swampman.DynamicSup, pid)
+        DynamicSupervisor.terminate_child(state.sup_pid, pid)
         workers = Map.delete(state.workers, pid)
         maybe_shrink(%{state | workers: workers})
 
@@ -231,7 +236,7 @@ defmodule Swampman.Manager do
 
   defp maybe_expand(%__MODULE__{} = state) do
     if map_size(state.workers) < state.target_size do
-      {:ok, pid} = DynamicSupervisor.start_child(Swampman.DynamicSup, state.worker_spec)
+      {:ok, pid} = DynamicSupervisor.start_child(state.sup_pid, state.worker_spec)
       ref = Process.monitor(pid)
       workers = Map.put(state.workers, pid, {:idle, ref})
       maybe_expand(%{state | workers: workers})
