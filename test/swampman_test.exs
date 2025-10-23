@@ -113,7 +113,7 @@ defmodule SwampmanTest do
             fn worker ->
               Agent.get(worker, & &1)
             end,
-            block: true
+            block: :infinity
           )
         end)
       end)

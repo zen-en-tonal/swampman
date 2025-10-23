@@ -24,7 +24,7 @@ defmodule Swampman do
       # Execute a function within a transaction
       iex> Swampman.transaction(manager, fn worker ->
       ...> Agent.get(worker, & &1)
-      ...> end, block: true)
+      ...> end, block: :infinity)
       0
       # Resize the pool to 15 workers
       iex> Swampman.resize(manager, {:pool, 15})
@@ -104,14 +104,33 @@ defmodule Swampman do
   @doc """
   Executes a function within a transaction, checking out a worker, executing the function, and then checking the worker back in.
 
-  If no workers are available, it will retry if the `:block` option is set to `true`.
+  If no workers are available, it will retry if the `:block` option is set to `timeout()`.
   """
   @spec transaction(
           atom() | pid() | {atom(), any()} | {:via, atom(), any()},
           (pid() -> any()),
-          keyword()
+          block: timeout() | boolean()
         ) :: any() | {:error, :no_idle}
   def transaction(manager, fun, opts \\ []) when is_function(fun, 1) do
+    case opts[:block] || false do
+      false ->
+        do_transaction(manager, fun)
+
+      true ->
+        do_blocking_transaction(manager, fun)
+
+      :infinity ->
+        do_blocking_transaction(manager, fun)
+
+      timeout when is_integer(timeout) and timeout > 0 ->
+        Task.async(fn ->
+          do_blocking_transaction(manager, fun)
+        end)
+        |> Task.await(timeout)
+    end
+  end
+
+  defp do_transaction(manager, fun) do
     case checkout(manager) do
       {:ok, worker} ->
         try do
@@ -121,12 +140,18 @@ defmodule Swampman do
         end
 
       {:error, :no_available_worker} ->
-        if opts[:block] do
-          :timer.sleep(100)
-          transaction(manager, fun, opts)
-        else
-          {:error, :no_idle}
-        end
+        {:error, :no_idle}
+    end
+  end
+
+  defp do_blocking_transaction(manager, fun, retry \\ 100) do
+    case do_transaction(manager, fun) do
+      {:error, :no_idle} ->
+        :timer.sleep(retry)
+        do_blocking_transaction(manager, fun, retry)
+
+      result ->
+        result
     end
   end
 end
