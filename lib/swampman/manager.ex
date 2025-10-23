@@ -181,7 +181,7 @@ defmodule Swampman.Manager do
         {_, ref} = state.workers[worker]
 
         {:noreply,
-         %{state | workers: Map.put(state.workers, worker, {:idle, ref})} |> maybe_shrink()}
+         %{state | workers: Map.put(state.workers, worker, {:idle, ref})} |> resolve_to_target()}
 
       MapSet.member?(state.overflow_workers, worker) ->
         DynamicSupervisor.terminate_child(state.sup_pid, worker)
@@ -194,7 +194,7 @@ defmodule Swampman.Manager do
   end
 
   def handle_cast({:resize, {:pool, new_size}}, %__MODULE__{} = state) do
-    {:noreply, %{state | target_size: new_size} |> maybe_shrink() |> maybe_expand()}
+    {:noreply, %{state | target_size: new_size} |> resolve_to_target()}
   end
 
   def handle_cast({:resize, {:overflow, new_size}}, %__MODULE__{} = state) do
@@ -206,7 +206,7 @@ defmodule Swampman.Manager do
     cond do
       Map.has_key?(state.workers, pid) ->
         workers = Map.delete(state.workers, pid)
-        {:noreply, %{state | workers: workers} |> maybe_expand()}
+        {:noreply, %{state | workers: workers} |> resolve_to_target()}
 
       MapSet.member?(state.overflow_workers, pid) ->
         overflow_workers = MapSet.delete(state.overflow_workers, pid)
@@ -243,6 +243,12 @@ defmodule Swampman.Manager do
     else
       state
     end
+  end
+
+  defp resolve_to_target(%__MODULE__{} = state) do
+    state
+    |> maybe_shrink()
+    |> maybe_expand()
   end
 
   defp pick_idle(%__MODULE__{} = state) do
