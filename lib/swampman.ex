@@ -123,10 +123,15 @@ defmodule Swampman do
         do_blocking_transaction(manager, fun)
 
       timeout when is_integer(timeout) and timeout > 0 ->
-        Task.async(fn ->
-          do_blocking_transaction(manager, fun)
-        end)
-        |> Task.await(timeout)
+        task =
+          Task.async(fn ->
+            do_blocking_transaction(manager, fun)
+          end)
+
+        case Task.yield(task, timeout) || Task.shutdown(task) do
+          {:ok, result} -> result
+          _ -> {:error, :no_idle}
+        end
     end
   end
 
