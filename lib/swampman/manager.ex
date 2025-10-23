@@ -152,7 +152,7 @@ defmodule Swampman.Manager do
   end
 
   def handle_call(:info, _from, %__MODULE__{} = state) do
-    busy_workers = Enum.count(state.workers, fn {_pid, status} -> status == :busy end)
+    busy_workers = Enum.count(Map.values(state.workers), fn {status, _} -> status == :busy end)
     idle_workers = map_size(state.workers) - busy_workers
 
     busy_overflow = MapSet.size(state.overflow_workers)
